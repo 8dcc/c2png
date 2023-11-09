@@ -1,25 +1,21 @@
-#+title: Title
+#+title: c2png
 #+options: toc:nil
 #+startup: showeverything
 #+author: 8dcc
 
 #+begin_comment
-*TODO*: Change project-name and title
 *TODO*: Change output.out in Makefile
 #+end_comment
 
-*Short description.*
+*Convert C source code to a PNG image.*
 
 #+TOC: headlines 2
-
-* Description
-Long description.
 
 * Building
 
 #+begin_src console
-$ git clone https://github.com/8dcc/project-name
-$ cd project-name
+$ git clone https://github.com/8dcc/c2png
+$ cd c2png
 $ make
 ...
 #+end_src
@@ -27,6 +23,6 @@ $ make
 * Usage
 
 #+begin_src console
-$ ./project-name.out --help
+$ ./c2png <filename>
 ...
 #+end_src
