@@ -3,10 +3,6 @@
 #+startup: showeverything
 #+author: 8dcc
 
-#+begin_comment
-*TODO*: Change output.out in Makefile
-#+end_comment
-
 *Convert C source code to a PNG image.*
 
 #+TOC: headlines 2
@@ -23,6 +19,6 @@ $ make
 * Usage
 
 #+begin_src console
-$ ./c2png <filename>
+$ ./c2png <source> <output>
 ...
 #+end_src
