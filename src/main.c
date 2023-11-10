@@ -13,6 +13,7 @@
 #define MARGIN       10 /* px */
 #define LINE_SPACING 1  /* px */
 #define BORDER_SZ    2  /* px */
+#define TAB_SZ       4  /* chars */
 
 /* Bytes of each entry in rows[] */
 #define COL_SZ 4
@@ -117,10 +118,16 @@ static void draw_rect(int x, int y, int w, int h, Color c) {
 }
 
 static void png_putchar(char c, Color fg, Color bg) {
-    if (c == '\n') {
-        y++;
-        x = 0;
-        return;
+    /* Hadle special cases */
+    switch (c) {
+        case '\n':
+            y++;
+            x = 0;
+            return;
+        case '\t':
+            for (int i = 0; i < TAB_SZ; i++)
+                png_putchar(' ', fg, bg);
+            return;
     }
 
     /* Iterate each pixel that forms the font char */
