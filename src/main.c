@@ -7,15 +7,16 @@
 
 #include "fonts/main_font.h" /* FONT_W, FONT_H, main_font[] */
 
-#define MIN_W  80 /* chars */
-#define MIN_H  0  /* chars */
-#define MARGIN 10 /* px */
+#define MIN_W        80 /* chars */
+#define MIN_H        0  /* chars */
+#define MARGIN       10 /* px */
+#define LINE_SPACING 1  /* px */
 
 /* Bytes of each entry in rows[] */
 #define COL_SZ 4
 
 /* Character position -> Pixel position */
-#define CHAR_Y_TO_PX(Y) (MARGIN + Y * FONT_H)
+#define CHAR_Y_TO_PX(Y) (MARGIN + Y * (FONT_H + LINE_SPACING))
 #define CHAR_X_TO_PX(X) (MARGIN + X * FONT_W)
 
 #define DIE(...)                      \
@@ -181,13 +182,11 @@ int main(int argc, char** argv) {
 
     /* Ugly, but does the job */
     input_get_dimensions(argv[1]);
-
     printf("Source contains %d rows and %d cols.\n", h, w);
 
     /* Convert to pixel size, adding top, bottom, left and down margins */
-    w_px = w * FONT_W + MARGIN * 2;
-    h_px = h * FONT_H + MARGIN * 2;
-
+    w_px = MARGIN + w * FONT_W + MARGIN;
+    h_px = MARGIN + h * (FONT_H + LINE_SPACING) + MARGIN;
     printf("Generating %dx%d image...\n", w_px, h_px);
 
     /* We allocate H_PX rows, W_PX cols in each row, and 4 bytes per pixel */
