@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <png.h>
 
 #include "fonts/main_font.h" /* FONT_W, FONT_H, main_font[] */
@@ -19,6 +20,8 @@
 /* Character position -> Pixel position */
 #define CHAR_Y_TO_PX(Y) (MARGIN + Y * (FONT_H + LINE_SPACING))
 #define CHAR_X_TO_PX(X) (MARGIN + X * FONT_W)
+
+#define COL(R, G, B, A) ((Color){ .r = R, .g = G, .b = B, .a = A })
 
 #define DIE(...)                      \
     {                                 \
@@ -62,9 +65,9 @@ static inline bool get_font_bit(uint8_t c, uint8_t x, uint8_t y) {
 }
 
 static inline void setup_palette(void) {
-    palette[COL_BACK]    = (Color){ 10, 10, 10, 255 };
-    palette[COL_BORDER]  = (Color){ 40, 40, 40, 255 };
-    palette[COL_DEFAULT] = (Color){ 255, 255, 255, 255 };
+    palette[COL_BACK]    = COL(10, 10, 10, 255);
+    palette[COL_BORDER]  = COL(40, 40, 40, 255);
+    palette[COL_DEFAULT] = COL(255, 255, 255, 255);
 }
 
 static void input_get_dimensions(char* filename) {
@@ -140,16 +143,49 @@ static void png_print(const char* s, Color fg, Color bg) {
     }
 }
 
+static void get_colors(const char* token, Color* fg, Color* bg) {
+    /* TODO: Check */
+    (void)token;
+
+    *fg = palette[COL_DEFAULT];
+    *bg = palette[COL_BACK];
+}
+
 static void source_to_png(const char* filename) {
     /* Write the characters to the rows array */
     FILE* fd = fopen(filename, "r");
     if (!fd)
         DIE("Can't open file: \"%s\"\n", filename);
 
-    /* TODO: Syntax */
+    /* No word is going to be larger than a line */
+    char* word_buf   = calloc(w, sizeof(char));
+    int word_buf_pos = 0;
+
     char c;
-    while ((c = fgetc(fd)) != EOF)
+    while ((c = fgetc(fd)) != EOF) {
+        if (!isspace(c)) {
+            word_buf[word_buf_pos++] = c;
+            continue;
+        }
+
+        /* We encountered a word separator, terminate string */
+        word_buf[word_buf_pos] = '\0';
+
+        /* Check color and print */
+        if (word_buf_pos > 0) {
+            Color fg, bg;
+            get_colors(word_buf, &fg, &bg);
+            png_print(word_buf, fg, bg);
+
+            /* Reset for new word */
+            word_buf_pos = 0;
+        }
+
+        /* Print the word separator we encountered */
         png_putchar(c, palette[COL_DEFAULT], palette[COL_BACK]);
+    }
+
+    free(word_buf);
     fclose(fd);
 }
 
