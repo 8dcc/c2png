@@ -1,5 +1,6 @@
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <png.h>
@@ -9,6 +10,13 @@
 #define MIN_W  80 /* chars */
 #define MIN_H  0  /* chars */
 #define MARGIN 10 /* px */
+
+/* Bytes of each entry in rows[] */
+#define COL_SZ 4
+
+/* Character position -> Pixel position */
+#define CHAR_Y_TO_PX(Y) (MARGIN + Y * FONT_H)
+#define CHAR_X_TO_PX(X) (MARGIN + X * FONT_W)
 
 #define DIE(...)                      \
     {                                 \
@@ -32,6 +40,9 @@ typedef struct {
 /* Initialized in setup_palette() */
 static Color palette[PALETTE_SZ];
 
+/* Current position when printing in chars */
+static uint32_t x = 0, y = 0;
+
 /* Size in chars. Overwritten by input_get_dimensions() */
 static uint32_t w = MIN_W, h = MIN_H;
 
@@ -42,6 +53,10 @@ static uint32_t w_px = 0, h_px = 0;
 static png_bytep* rows = NULL;
 
 /*----------------------------------------------------------------------------*/
+
+static inline bool get_font_bit(uint8_t c, uint8_t x, uint8_t y) {
+    return main_font[c * FONT_H + y] & (0x80 >> x);
+}
 
 static inline void setup_palette(void) {
     palette[COL_BACK]    = (Color){ 34, 34, 34, 255 };
@@ -80,6 +95,44 @@ static void clear_image(Color c) {
             rows[y][x + 2] = c.b;
             rows[y][x + 3] = c.a;
         }
+    }
+}
+
+static void png_putchar(char c, Color fg, Color bg) {
+    if (c == '\n') {
+        y++;
+        x = 0;
+        return;
+    }
+
+    /* Iterate each pixel that forms the font char */
+    for (uint8_t fy = 0; fy < FONT_H; fy++) {
+        /* Get real screen position from the char offset on the image and the
+         * pixel font offset on the char */
+        const uint32_t final_y = CHAR_Y_TO_PX(y) + fy;
+
+        for (uint8_t fx = 0; fx < FONT_W; fx++) {
+            /* For the final_x, we also need to multiply it by the size of each
+            pixel in the cols array */
+            const uint32_t final_x = (CHAR_X_TO_PX(x) + fx) * COL_SZ;
+
+            /* Actual color to use depending if the bit is set in the font */
+            Color col = get_font_bit(c, fx, fy) ? fg : bg;
+
+            rows[final_y][final_x]     = col.r;
+            rows[final_y][final_x + 1] = col.g;
+            rows[final_y][final_x + 2] = col.b;
+            rows[final_y][final_x + 3] = col.a;
+        }
+    }
+
+    x++;
+}
+
+static void png_print(const char* s, Color fg, Color bg) {
+    while (*s != '\0' && *s != EOF) {
+        png_putchar(*s, fg, bg);
+        s++;
     }
 }
 
@@ -145,6 +198,18 @@ int main(int argc, char** argv) {
     /* Clear with background */
     clear_image(palette[COL_BACK]);
 
+    /* Write the characters to the rows array */
+    FILE* fd = fopen(argv[1], "r");
+    if (!fd)
+        DIE("Can't open file: \"%s\"\n", argv[1]);
+
+    /* TODO: Syntax */
+    char c;
+    while ((c = fgetc(fd)) != EOF)
+        png_putchar(c, palette[COL_DEFAULT], palette[COL_BACK]);
+    fclose(fd);
+
+    /* Write rows to the output png file */
     write_png_file(argv[2]);
 
     puts("Done.");
