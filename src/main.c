@@ -108,7 +108,10 @@ static void input_get_dimensions(char* filename) {
 
 static void draw_rect(int x, int y, int w, int h, Color c) {
     for (int cur_y = y; cur_y < y + h; cur_y++) {
-        for (int cur_x = x * 4; cur_x < (x + w) * 4; cur_x += 4) {
+        /* To get the real position in the rows array, we need to multiply the
+         * positions by the size of each element: COL_SZ (4) */
+        for (int cur_x = x * COL_SZ; cur_x < (x + w) * COL_SZ;
+             cur_x += COL_SZ) {
             rows[cur_y][cur_x]     = c.r;
             rows[cur_y][cur_x + 1] = c.g;
             rows[cur_y][cur_x + 2] = c.b;
@@ -328,7 +331,7 @@ int main(int argc, char** argv) {
     /* We allocate H_PX rows, W_PX cols in each row, and 4 bytes per pixel */
     rows = malloc(h_px * sizeof(png_bytep));
     for (uint32_t y = 0; y < h_px; y++)
-        rows[y] = malloc(w_px * sizeof(uint8_t) * 4);
+        rows[y] = malloc(w_px * sizeof(uint8_t) * COL_SZ);
 
     /* Clear with background */
     draw_rect(0, 0, w_px, h_px, palette[COL_BACK]);
