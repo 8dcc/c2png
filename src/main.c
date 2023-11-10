@@ -33,8 +33,15 @@ enum EPaletteIndexes {
     COL_BACK,
     COL_BORDER,
     COL_DEFAULT,
+    COL_COMMENT,
 
     PALETTE_SZ,
+};
+
+enum ECommentTypes {
+    COMMENT_NO,    /* We are not in a comment */
+    COMMENT_LINE,  /* Single line */
+    COMMENT_MULTI, /* Multi-line */
 };
 
 typedef struct {
@@ -55,6 +62,9 @@ static uint32_t w = MIN_W, h = MIN_H;
 /* Size in px. Includes margins */
 static uint32_t w_px = 0, h_px = 0;
 
+/* What kind of comment are we in? */
+static enum ECommentTypes in_comment = COMMENT_NO;
+
 /* Actually png_bytep is typedef'd to a pointer, so this is a (void**) */
 static png_bytep* rows = NULL;
 
@@ -68,6 +78,7 @@ static inline void setup_palette(void) {
     palette[COL_BACK]    = COL(10, 10, 10, 255);
     palette[COL_BORDER]  = COL(40, 40, 40, 255);
     palette[COL_DEFAULT] = COL(255, 255, 255, 255);
+    palette[COL_COMMENT] = COL(152, 152, 152, 255);
 }
 
 static void input_get_dimensions(char* filename) {
@@ -143,9 +154,64 @@ static void png_print(const char* s, Color fg, Color bg) {
     }
 }
 
+static bool closes_comment(const char* token) {
+    /* Get the position of the NULL terminator */
+    int end = 0;
+    while (token[end] != '\0')
+        end++;
+
+    /* Check if the string ends a multi-line comment */
+    return (end >= 2 && token[end - 2] == '*' && token[end - 1] == '/');
+}
+
 static void get_colors(const char* token, Color* fg, Color* bg) {
-    /* TODO: Check */
-    (void)token;
+    /* Checked from source_to_png(), ignore */
+    if (in_comment == COMMENT_LINE) {
+        *fg = palette[COL_COMMENT];
+        *bg = palette[COL_BACK];
+        return;
+    }
+
+    /* We need an extra variable because we might open and end the comment in
+     * the same word */
+    bool comment_end = closes_comment(token);
+
+    /* Asumes all comments are separated from the code by a space */
+    if (token[0] == '/') {
+        if (token[1] == '/') {
+            in_comment = COMMENT_LINE;
+            *fg        = palette[COL_COMMENT];
+            *bg        = palette[COL_BACK];
+            return;
+        }
+
+        // Single-line comment
+        if (token[1] == '*') {
+            *fg = palette[COL_COMMENT];
+            *bg = palette[COL_BACK];
+
+            /* Starts and end a comment at the same time? */
+            if (!comment_end)
+                in_comment = COMMENT_MULTI;
+
+            return;
+        }
+    }
+
+    if (comment_end) {
+        *fg        = palette[COL_COMMENT];
+        *bg        = palette[COL_BACK];
+        in_comment = COMMENT_NO;
+        return;
+    }
+
+    /* We couldn't check this earlier because we had to check if we closed the
+     * multi-line comment */
+    if (in_comment == COMMENT_MULTI) {
+        *fg = palette[COL_COMMENT];
+        *bg = palette[COL_BACK];
+        return;
+    }
 
     *fg = palette[COL_DEFAULT];
     *bg = palette[COL_BACK];
@@ -180,6 +246,10 @@ static void source_to_png(const char* filename) {
             /* Reset for new word */
             word_buf_pos = 0;
         }
+
+        /* We were in an single line comment and we changed line */
+        if (c == '\n' && in_comment == COMMENT_LINE)
+            in_comment = COMMENT_NO;
 
         /* Print the word separator we encountered */
         png_putchar(c, palette[COL_DEFAULT], palette[COL_BACK]);
