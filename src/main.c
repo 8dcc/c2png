@@ -11,6 +11,7 @@
 #define MIN_H        0  /* chars */
 #define MARGIN       10 /* px */
 #define LINE_SPACING 1  /* px */
+#define BORDER_SZ    2  /* px */
 
 /* Bytes of each entry in rows[] */
 #define COL_SZ 4
@@ -27,6 +28,7 @@
 
 enum EPaletteIndexes {
     COL_BACK,
+    COL_BORDER,
     COL_DEFAULT,
 
     PALETTE_SZ,
@@ -60,7 +62,8 @@ static inline bool get_font_bit(uint8_t c, uint8_t x, uint8_t y) {
 }
 
 static inline void setup_palette(void) {
-    palette[COL_BACK]    = (Color){ 34, 34, 34, 255 };
+    palette[COL_BACK]    = (Color){ 10, 10, 10, 255 };
+    palette[COL_BORDER]  = (Color){ 40, 40, 40, 255 };
     palette[COL_DEFAULT] = (Color){ 255, 255, 255, 255 };
 }
 
@@ -88,13 +91,13 @@ static void input_get_dimensions(char* filename) {
     fclose(fd);
 }
 
-static void clear_image(Color c) {
-    for (uint32_t y = 0; y < h_px; y++) {
-        for (uint32_t x = 0; x < w_px * 4; x += 4) {
-            rows[y][x]     = c.r;
-            rows[y][x + 1] = c.g;
-            rows[y][x + 2] = c.b;
-            rows[y][x + 3] = c.a;
+static void draw_rect(int x, int y, int w, int h, Color c) {
+    for (int cur_y = y; cur_y < y + h; cur_y++) {
+        for (int cur_x = x * 4; cur_x < (x + w) * 4; cur_x += 4) {
+            rows[cur_y][cur_x]     = c.r;
+            rows[cur_y][cur_x + 1] = c.g;
+            rows[cur_y][cur_x + 2] = c.b;
+            rows[cur_y][cur_x + 3] = c.a;
         }
     }
 }
@@ -137,7 +140,27 @@ static void png_print(const char* s, Color fg, Color bg) {
     }
 }
 
-static void write_png_file(char* filename) {
+static void source_to_png(const char* filename) {
+    /* Write the characters to the rows array */
+    FILE* fd = fopen(filename, "r");
+    if (!fd)
+        DIE("Can't open file: \"%s\"\n", filename);
+
+    /* TODO: Syntax */
+    char c;
+    while ((c = fgetc(fd)) != EOF)
+        png_putchar(c, palette[COL_DEFAULT], palette[COL_BACK]);
+    fclose(fd);
+}
+
+static void draw_border(void) {
+    draw_rect(0, 0, w_px, BORDER_SZ, palette[COL_BORDER]);
+    draw_rect(0, 0, BORDER_SZ, h_px, palette[COL_BORDER]);
+    draw_rect(0, h_px - BORDER_SZ, w_px, BORDER_SZ, palette[COL_BORDER]);
+    draw_rect(w_px - BORDER_SZ, 0, BORDER_SZ, h_px, palette[COL_BORDER]);
+}
+
+static void write_png_file(const char* filename) {
     FILE* fd = fopen(filename, "wb");
     if (!fd)
         DIE("Can't open file: \"%s\"\n", filename);
@@ -195,18 +218,13 @@ int main(int argc, char** argv) {
         rows[y] = malloc(w_px * sizeof(uint8_t) * 4);
 
     /* Clear with background */
-    clear_image(palette[COL_BACK]);
+    draw_rect(0, 0, w_px, h_px, palette[COL_BACK]);
 
-    /* Write the characters to the rows array */
-    FILE* fd = fopen(argv[1], "r");
-    if (!fd)
-        DIE("Can't open file: \"%s\"\n", argv[1]);
+    /* Convert the text to png */
+    source_to_png(argv[1]);
 
-    /* TODO: Syntax */
-    char c;
-    while ((c = fgetc(fd)) != EOF)
-        png_putchar(c, palette[COL_DEFAULT], palette[COL_BACK]);
-    fclose(fd);
+    /* Draw border */
+    draw_border();
 
     /* Write rows to the output png file */
     write_png_file(argv[2]);
