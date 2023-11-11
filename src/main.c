@@ -1,4 +1,3 @@
-
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -7,6 +6,7 @@
 #include <png.h>
 
 #include "fonts/main_font.h" /* FONT_W, FONT_H, main_font[] */
+#include "include/highlight.h"
 
 #define MIN_W        80 /* chars */
 #define MIN_H        0  /* chars */
@@ -31,18 +31,22 @@
     }
 
 enum EPaletteIndexes {
-    COL_BACK,
-    COL_BORDER,
-    COL_DEFAULT,
+    /* Used by highlight.c */
+    COL_DEFAULT = 0,
+    COL_PREPROC,
+    COL_TYPES,
+    COL_KWRDS,
+    COL_NUMBER,
+    COL_STRING,
     COL_COMMENT,
+    COL_FUNC_CALL,
+    COL_SYMBOL,
+    COL_BACK,
+
+    /* Used only in main.c */
+    COL_BORDER,
 
     PALETTE_SZ,
-};
-
-enum ECommentTypes {
-    COMMENT_NO,    /* We are not in a comment */
-    COMMENT_LINE,  /* Single line */
-    COMMENT_MULTI, /* Multi-line */
 };
 
 typedef struct {
@@ -63,9 +67,6 @@ static uint32_t w = MIN_W, h = MIN_H;
 /* Size in px. Includes margins */
 static uint32_t w_px = 0, h_px = 0;
 
-/* What kind of comment are we in? */
-static enum ECommentTypes in_comment = COMMENT_NO;
-
 /* Actually png_bytep is typedef'd to a pointer, so this is a (void**) */
 static png_bytep* rows = NULL;
 
@@ -76,10 +77,18 @@ static inline bool get_font_bit(uint8_t c, uint8_t x, uint8_t y) {
 }
 
 static inline void setup_palette(void) {
-    palette[COL_BACK]    = COL(10, 10, 10, 255);
-    palette[COL_BORDER]  = COL(40, 40, 40, 255);
-    palette[COL_DEFAULT] = COL(255, 255, 255, 255);
-    palette[COL_COMMENT] = COL(152, 152, 152, 255);
+    palette[COL_DEFAULT]   = COL(255, 255, 255, 255);
+    palette[COL_PREPROC]   = COL(231, 76, 60, 255);
+    palette[COL_TYPES]     = COL(102, 217, 239, 255);
+    palette[COL_KWRDS]     = COL(249, 38, 96, 255);
+    palette[COL_NUMBER]    = COL(174, 129, 255, 255);
+    palette[COL_STRING]    = COL(230, 219, 116, 255);
+    palette[COL_COMMENT]   = COL(152, 152, 152, 255);
+    palette[COL_FUNC_CALL] = COL(166, 226, 46, 255);
+    palette[COL_SYMBOL]    = palette[COL_DEFAULT];
+
+    palette[COL_BACK]   = COL(10, 10, 10, 255);
+    palette[COL_BORDER] = COL(40, 40, 40, 255);
 }
 
 static void input_get_dimensions(char* filename) {
@@ -157,74 +166,31 @@ static void png_putchar(char c, Color fg, Color bg) {
     x++;
 }
 
-static void png_print(const char* s, Color fg, Color bg) {
+static void png_print(const char* s) {
+    Color fg = palette[COL_DEFAULT];
+    Color bg = palette[COL_BACK];
+
     while (*s != '\0' && *s != EOF) {
+        /* Escape character used to change color */
+        if (*s == 0x1B) {
+            s++;
+
+            /* See bottom of COLORS[] in highlight.c */
+            const int fg_idx = *s++;
+            const int bg_idx = *s++;
+
+            /* Also skip NULL terminator for the color strings */
+            s++;
+
+            fg = palette[fg_idx];
+            bg = palette[bg_idx];
+
+            continue;
+        }
+
         png_putchar(*s, fg, bg);
         s++;
     }
-}
-
-static bool closes_comment(const char* token) {
-    /* Get the position of the NULL terminator */
-    int end = 0;
-    while (token[end] != '\0')
-        end++;
-
-    /* Check if the string ends a multi-line comment */
-    return (end >= 2 && token[end - 2] == '*' && token[end - 1] == '/');
-}
-
-static void get_colors(const char* token, Color* fg, Color* bg) {
-    /* Checked from source_to_png(), ignore */
-    if (in_comment == COMMENT_LINE) {
-        *fg = palette[COL_COMMENT];
-        *bg = palette[COL_BACK];
-        return;
-    }
-
-    /* We need an extra variable because we might open and end the comment in
-     * the same word */
-    bool comment_end = closes_comment(token);
-
-    /* Asumes all comments are separated from the code by a space */
-    if (token[0] == '/') {
-        if (token[1] == '/') {
-            in_comment = COMMENT_LINE;
-            *fg        = palette[COL_COMMENT];
-            *bg        = palette[COL_BACK];
-            return;
-        }
-
-        // Single-line comment
-        if (token[1] == '*') {
-            *fg = palette[COL_COMMENT];
-            *bg = palette[COL_BACK];
-
-            /* Starts and end a comment at the same time? */
-            if (!comment_end)
-                in_comment = COMMENT_MULTI;
-
-            return;
-        }
-    }
-
-    if (comment_end) {
-        *fg        = palette[COL_COMMENT];
-        *bg        = palette[COL_BACK];
-        in_comment = COMMENT_NO;
-        return;
-    }
-
-    /* We couldn't check this earlier because we had to check if we closed the
-     * multi-line comment */
-    if (in_comment == COMMENT_MULTI) {
-        *fg = palette[COL_COMMENT];
-        *bg = palette[COL_BACK];
-        return;
-    }
-
-    *fg = palette[COL_DEFAULT];
-    *bg = palette[COL_BACK];
 }
 
 static void source_to_png(const char* filename) {
@@ -233,39 +199,44 @@ static void source_to_png(const char* filename) {
     if (!fd)
         DIE("Can't open file: \"%s\"\n", filename);
 
-    /* No word is going to be larger than a line */
-    char* word_buf   = calloc(w, sizeof(char));
-    int word_buf_pos = 0;
+    if (highlight_init(NULL) < 0)
+        DIE("Unable to initialize the highlight library\n");
+
+    /* Used when calling highlight_line() */
+    char* hl_line = highlight_alloc_line();
+
+    /* Used by us for storing each line and adding NULL terminator */
+    char* line_buf   = malloc(w * sizeof(char));
+    int line_buf_pos = 0;
 
     char c;
     while ((c = fgetc(fd)) != EOF) {
-        if (!isspace(c)) {
-            word_buf[word_buf_pos++] = c;
+		/* Store chars until newline */
+        if (c != '\n') {
+            line_buf[line_buf_pos++] = c;
             continue;
         }
 
-        /* We encountered a word separator, terminate string */
-        word_buf[word_buf_pos] = '\0';
+        /* We encountered newline, terminate string */
+        line_buf[line_buf_pos] = '\0';
 
         /* Check color and print */
-        if (word_buf_pos > 0) {
-            Color fg, bg;
-            get_colors(word_buf, &fg, &bg);
-            png_print(word_buf, fg, bg);
+        hl_line = highlight_line(line_buf, hl_line, line_buf_pos);
 
-            /* Reset for new word */
-            word_buf_pos = 0;
-        }
+        /* Print the line with the escape codes, used for changing the colors */
+        png_print(hl_line);
 
-        /* We were in an single line comment and we changed line */
-        if (c == '\n' && in_comment == COMMENT_LINE)
-            in_comment = COMMENT_NO;
+        /* Reset for next line */
+        line_buf_pos = 0;
 
-        /* Print the word separator we encountered */
-        png_putchar(c, palette[COL_DEFAULT], palette[COL_BACK]);
+        /* Print the newline we encountered */
+        png_putchar('\n', palette[COL_DEFAULT], palette[COL_BACK]);
     }
 
-    free(word_buf);
+    highlight_free(hl_line);
+    highlight_finish();
+
+    free(line_buf);
     fclose(fd);
 }
 
