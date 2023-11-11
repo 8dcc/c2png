@@ -1,9 +1,9 @@
 
 CC=gcc
 CFLAGS=-Wall -Wextra
-LDFLAGS=-lpng
+LDFLAGS=-lm -lpng
 
-OBJ_FILES=main.c.o
+OBJ_FILES=main.c.o highlight.c.o hashtable.c.o
 OBJS=$(addprefix obj/, $(OBJ_FILES))
 
 BIN=c2png
