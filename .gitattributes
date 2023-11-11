@@ -1,0 +1,3 @@
+/src/hashtable.c linguist-detectable=false
+/src/highlight.c linguist-detectable=false
+/src/include/* linguist-detectable=false
