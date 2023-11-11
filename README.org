@@ -22,3 +22,7 @@ $ make
 $ ./c2png <source> <output>
 ...
 #+end_src
+
+* Screenshot
+
+[[https://user-images.githubusercontent.com/29655971/282262399-2adb57f4-1580-4727-8ceb-c08302fa68e9.png]]
