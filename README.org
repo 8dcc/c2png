@@ -23,6 +23,15 @@ $ ./c2png <source> <output>
 ...
 #+end_src
 
+* Credits
+
+Font:
+- [[https://github.com/slavfox/Cozette][slavfox/Cozette]]
+- [[https://sourceforge.net/projects/bdf2c/][bdf2c]] ([[https://github.com/pixelmatix/bdf2c][GitHub fork]])
+
+Syntax highlighting:
+- [[https://github.com/Theldus/kat][Theldus/kat]]
+
 * Output
 
 This is the output of converting the =src/main.c= file itself.
