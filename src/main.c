@@ -22,7 +22,13 @@
 #define CHAR_Y_TO_PX(Y) (MARGIN + Y * (FONT_H + LINE_SPACING))
 #define CHAR_X_TO_PX(X) (MARGIN + X * FONT_W)
 
-#define COL(R, G, B, A) ((Color){ .r = R, .g = G, .b = B, .a = A })
+#define COL(RGB, A)            \
+    ((Color){                  \
+      .r = (RGB >> 16) & 0xFF, \
+      .g = (RGB >> 8) & 0xFF,  \
+      .b = RGB & 0xFF,         \
+      .a = A & 0xFF,           \
+    })
 
 #define DIE(...)                      \
     {                                 \
@@ -41,9 +47,9 @@ enum EPaletteIndexes {
     COL_COMMENT,
     COL_FUNC_CALL,
     COL_SYMBOL,
-    COL_BACK,
 
     /* Used only in main.c */
+    COL_BACK,
     COL_BORDER,
 
     PALETTE_SZ,
@@ -77,18 +83,18 @@ static inline bool get_font_bit(uint8_t c, uint8_t x, uint8_t y) {
 }
 
 static inline void setup_palette(void) {
-    palette[COL_DEFAULT]   = COL(255, 255, 255, 255);
-    palette[COL_PREPROC]   = COL(231, 76, 60, 255);
-    palette[COL_TYPES]     = COL(102, 217, 239, 255);
-    palette[COL_KWRDS]     = COL(249, 38, 96, 255);
-    palette[COL_NUMBER]    = COL(174, 129, 255, 255);
-    palette[COL_STRING]    = COL(230, 219, 116, 255);
-    palette[COL_COMMENT]   = COL(152, 152, 152, 255);
-    palette[COL_FUNC_CALL] = COL(166, 226, 46, 255);
+    palette[COL_DEFAULT]   = COL(0xFFFFFF, 255);
+    palette[COL_PREPROC]   = COL(0xFF6740, 255);
+    palette[COL_TYPES]     = COL(0x79A8FF, 255);
+    palette[COL_KWRDS]     = COL(0xFF6F9F, 255);
+    palette[COL_NUMBER]    = COL(0x88CA9F, 255);
+    palette[COL_STRING]    = COL(0x00D3D0, 255);
+    palette[COL_COMMENT]   = COL(0x989898, 255);
+    palette[COL_FUNC_CALL] = palette[COL_DEFAULT];
     palette[COL_SYMBOL]    = palette[COL_DEFAULT];
 
-    palette[COL_BACK]   = COL(10, 10, 10, 255);
-    palette[COL_BORDER] = COL(40, 40, 40, 255);
+    palette[COL_BACK]   = COL(0x050505, 255);
+    palette[COL_BORDER] = COL(0x222222, 255);
 }
 
 static void input_get_dimensions(char* filename) {
@@ -211,7 +217,7 @@ static void source_to_png(const char* filename) {
 
     char c;
     while ((c = fgetc(fd)) != EOF) {
-		/* Store chars until newline */
+        /* Store chars until newline */
         if (c != '\n') {
             line_buf[line_buf_pos++] = c;
             continue;
