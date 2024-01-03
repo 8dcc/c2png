@@ -6,6 +6,7 @@ LDFLAGS=-lm -lpng
 OBJ_FILES=main.c.o highlight.c.o hashtable.c.o
 OBJS=$(addprefix obj/, $(OBJ_FILES))
 
+INSTALL_DIR=/usr/local/bin
 BIN=c2png
 
 #-------------------------------------------------------------------------------
@@ -17,6 +18,10 @@ all: $(BIN)
 clean:
 	rm -f $(OBJS)
 	rm -f $(BIN)
+
+install: $(BIN)
+	mkdir -p $(INSTALL_DIR)
+	install -m 755 ./$(BIN) $(INSTALL_DIR)/$(BIN)
 
 #-------------------------------------------------------------------------------
 
