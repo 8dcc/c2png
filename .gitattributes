@@ -1,3 +1,4 @@
+# Don't detect libs in GitHub's language detection
 /src/hashtable.c linguist-generated=false
 /src/highlight.c linguist-generated=false
-/src/include/* linguist-generated=false
+/src/include/** linguist-generated=false
