@@ -1,5 +1,9 @@
 # Binary
 c2png
+txt2png
+
+# Output files
+*.png
 
 # Doxygen documentation
 /doc/html/
