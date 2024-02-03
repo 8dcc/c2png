@@ -188,8 +188,14 @@ static void png_print(const char* s) {
             /* Also skip NULL terminator for the color strings */
             s++;
 
+#ifdef DISABLE_SYNTAX_HIGHLIGHT
+            /* No syntax highlight, unused */
+            (void)fg_idx;
+            (void)bg_idx;
+#else
             fg = palette[fg_idx];
             bg = palette[bg_idx];
+#endif
 
             continue;
         }

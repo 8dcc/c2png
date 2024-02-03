@@ -11,7 +11,7 @@ BIN=c2png
 
 #-------------------------------------------------------------------------------
 
-.PHONY: clean all
+.PHONY: all clean install
 
 all: $(BIN)
 
@@ -25,7 +25,9 @@ install: $(BIN)
 
 #-------------------------------------------------------------------------------
 
-$(BIN): $(OBJS)
+txt2png: CFLAGS += -DDISABLE_SYNTAX_HIGHLIGHT
+
+c2png txt2png: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LDFLAGS)
 
 obj/%.c.o : src/%.c
