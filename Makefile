@@ -1,13 +1,15 @@
 
 CC=gcc
 CFLAGS=-Wall -Wextra
-LDFLAGS=-lm -lpng
+LDLIBS=-lm -lpng
 
-OBJ_FILES=main.c.o highlight.c.o hashtable.c.o
-OBJS=$(addprefix obj/, $(OBJ_FILES))
+SRC=main.c highlight.c hashtable.c
+OBJ=$(addprefix obj/, $(addsuffix .o, $(SRC)))
 
-INSTALL_DIR=/usr/local/bin
 BIN=c2png
+
+PREFIX=/usr/local
+BINDIR=$(PREFIX)/bin
 
 #-------------------------------------------------------------------------------
 
@@ -16,19 +18,18 @@ BIN=c2png
 all: $(BIN)
 
 clean:
-	rm -f $(OBJS)
+	rm -f $(OBJ)
 	rm -f $(BIN)
 
 install: $(BIN)
-	mkdir -p $(INSTALL_DIR)
-	install -m 755 ./$(BIN) $(INSTALL_DIR)/$(BIN)
+	install -D -m 755 $^ -t $(DESTDIR)$(BINDIR)
 
 #-------------------------------------------------------------------------------
 
 txt2png: CFLAGS += -DDISABLE_SYNTAX_HIGHLIGHT
 
-c2png txt2png: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LDFLAGS)
+c2png txt2png: $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 obj/%.c.o : src/%.c
 	@mkdir -p $(dir $@)
