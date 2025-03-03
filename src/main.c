@@ -16,11 +16,13 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <assert.h>
+#include <errno.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
 
 #include <png.h>
@@ -51,10 +53,11 @@
     })
 
 #define DIE(...)                                                               \
-    {                                                                          \
+    do {                                                                       \
         fprintf(stderr, __VA_ARGS__);                                          \
+        fputc('\n', stderr);                                                   \
         exit(1);                                                               \
-    }
+    } while (0)
 
 enum EPaletteIndexes {
     /* Used by highlight.c */
@@ -120,7 +123,7 @@ static inline void setup_palette(void) {
 static void input_get_dimensions(char* filename) {
     FILE* fd = fopen(filename, "r");
     if (!fd)
-        DIE("Can't open file: \"%s\"\n", filename);
+        DIE("Can't open file '%s': %s", filename, strerror(errno));
 
     uint32_t x = 0, y = 0;
 
@@ -231,10 +234,10 @@ static void source_to_png(const char* filename) {
     /* Write the characters to the rows array */
     FILE* fd = fopen(filename, "r");
     if (!fd)
-        DIE("Can't open file: \"%s\"\n", filename);
+        DIE("Can't open file '%s': %s", filename, strerror(errno));
 
     if (highlight_init(NULL) < 0)
-        DIE("Unable to initialize the highlight library\n");
+        DIE("Unable to initialize the highlight library.");
 
     /* Used when calling highlight_line() */
     char* hl_line = highlight_alloc_line();
@@ -287,16 +290,16 @@ static void draw_border(void) {
 static void write_png_file(const char* filename) {
     FILE* fd = fopen(filename, "wb");
     if (!fd)
-        DIE("Can't open file: \"%s\"\n", filename);
+        DIE("Can't open file '%s': %s", filename, strerror(errno));
 
     png_structp png =
       png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     if (!png)
-        DIE("Can't create png_structp\n");
+        DIE("Can't create `png_structp'.");
 
     png_infop info = png_create_info_struct(png);
     if (!info)
-        DIE("Can't create png_infop\n");
+        DIE("Can't create `png_infop'.");
 
     /* Specify the PNG info */
     png_init_io(png, fd);
@@ -328,7 +331,7 @@ static void write_png_file(const char* filename) {
 
 int main(int argc, char** argv) {
     if (argc < 3)
-        DIE("Usage: %s <in> <out>\n", argv[0]);
+        DIE("Usage: %s INPUT.c OUTPUT.png", argv[0]);
 
     /* Setup color palette */
     setup_palette();
