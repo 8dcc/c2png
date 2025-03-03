@@ -22,18 +22,18 @@
 #define CHAR_Y_TO_PX(Y) (MARGIN + Y * (FONT_H + LINE_SPACING))
 #define CHAR_X_TO_PX(X) (MARGIN + X * FONT_W)
 
-#define COL(RGB, A)            \
-    ((Color){                  \
-      .r = (RGB >> 16) & 0xFF, \
-      .g = (RGB >> 8) & 0xFF,  \
-      .b = RGB & 0xFF,         \
-      .a = A & 0xFF,           \
+#define COL(RGB, A)                                                            \
+    ((Color){                                                                  \
+      .r = (RGB >> 16) & 0xFF,                                                 \
+      .g = (RGB >> 8) & 0xFF,                                                  \
+      .b = RGB & 0xFF,                                                         \
+      .a = A & 0xFF,                                                           \
     })
 
-#define DIE(...)                      \
-    {                                 \
-        fprintf(stderr, __VA_ARGS__); \
-        exit(1);                      \
+#define DIE(...)                                                               \
+    {                                                                          \
+        fprintf(stderr, __VA_ARGS__);                                          \
+        exit(1);                                                               \
     }
 
 enum EPaletteIndexes {
@@ -275,8 +275,14 @@ static void write_png_file(const char* filename) {
 
     /* Specify the PNG info */
     png_init_io(png, fd);
-    png_set_IHDR(png, info, w_px, h_px, 8, PNG_COLOR_TYPE_RGBA,
-                 PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
+    png_set_IHDR(png,
+                 info,
+                 w_px,
+                 h_px,
+                 8,
+                 PNG_COLOR_TYPE_RGBA,
+                 PNG_INTERLACE_NONE,
+                 PNG_COMPRESSION_TYPE_DEFAULT,
                  PNG_FILTER_TYPE_DEFAULT);
     png_write_info(png, info);
 
