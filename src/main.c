@@ -16,6 +16,7 @@
  * this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -237,11 +238,14 @@ static void source_to_png(const char* filename) {
     char* hl_line = highlight_alloc_line();
 
     /* Used by us for storing each line and adding NULL terminator */
-    char* line_buf   = malloc(w * sizeof(char));
-    int line_buf_pos = 0;
+    size_t line_buf_sz  = w + 1;
+    size_t line_buf_pos = 0;
+    char* line_buf      = malloc(line_buf_sz * sizeof(char));
 
     char c;
     while ((c = fgetc(fd)) != EOF) {
+        assert(line_buf_pos < line_buf_sz);
+
         /* Store chars until newline */
         if (c != '\n') {
             line_buf[line_buf_pos++] = c;
