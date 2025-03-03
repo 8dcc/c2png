@@ -1,7 +1,7 @@
 
 CC=gcc
-CFLAGS=-Wall -Wextra
-LDLIBS=-lm -lpng
+CFLAGS=-Wall -Wextra $(shell pkg-config --cflags libpng)
+LDLIBS=-lm $(shell pkg-config --libs libpng)
 
 SRC=main.c highlight.c hashtable.c
 OBJ=$(addprefix obj/, $(addsuffix .o, $(SRC)))
@@ -33,4 +33,4 @@ c2png txt2png: $(OBJ)
 
 obj/%.c.o : src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -o $@ -c $<
