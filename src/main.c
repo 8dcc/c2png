@@ -121,14 +121,14 @@ static inline void setup_palette(void) {
 }
 
 static void input_get_dimensions(char* filename) {
-    FILE* fd = fopen(filename, "r");
-    if (!fd)
+    FILE* fp = fopen(filename, "r");
+    if (!fp)
         DIE("Can't open file '%s': %s", filename, strerror(errno));
 
     uint32_t x = 0, y = 0;
 
     char c;
-    while ((c = fgetc(fd)) != EOF) {
+    while ((c = fgetc(fp)) != EOF) {
         if (c == '\n') {
             y++;
             x = 0;
@@ -143,7 +143,7 @@ static void input_get_dimensions(char* filename) {
             h = y;
     }
 
-    fclose(fd);
+    fclose(fp);
 }
 
 static void draw_rect(int x, int y, int w, int h, Color c) {
@@ -232,8 +232,8 @@ static void png_print(const char* s) {
 
 static void source_to_png(const char* filename) {
     /* Write the characters to the rows array */
-    FILE* fd = fopen(filename, "r");
-    if (!fd)
+    FILE* fp = fopen(filename, "r");
+    if (!fp)
         DIE("Can't open file '%s': %s", filename, strerror(errno));
 
     if (highlight_init(NULL) < 0)
@@ -248,7 +248,7 @@ static void source_to_png(const char* filename) {
     char* line_buf      = malloc(line_buf_sz * sizeof(char));
 
     char c;
-    while ((c = fgetc(fd)) != EOF) {
+    while ((c = fgetc(fp)) != EOF) {
         assert(line_buf_pos < line_buf_sz);
 
         /* Store chars until newline */
@@ -277,7 +277,7 @@ static void source_to_png(const char* filename) {
     highlight_finish();
 
     free(line_buf);
-    fclose(fd);
+    fclose(fp);
 }
 
 static void draw_border(void) {
@@ -288,8 +288,8 @@ static void draw_border(void) {
 }
 
 static void write_png_file(const char* filename) {
-    FILE* fd = fopen(filename, "wb");
-    if (!fd)
+    FILE* fp = fopen(filename, "wb");
+    if (!fp)
         DIE("Can't open file '%s': %s", filename, strerror(errno));
 
     png_structp png =
@@ -302,7 +302,7 @@ static void write_png_file(const char* filename) {
         DIE("Can't create `png_infop'.");
 
     /* Specify the PNG info */
-    png_init_io(png, fd);
+    png_init_io(png, fp);
     png_set_IHDR(png,
                  info,
                  w_px,
@@ -325,7 +325,7 @@ static void write_png_file(const char* filename) {
     /* And the array itself */
     free(rows);
 
-    fclose(fd);
+    fclose(fp);
     png_destroy_write_struct(&png, &info);
 }
 
