@@ -1,6 +1,6 @@
 
 CC=gcc
-CFLAGS=-Wall -Wextra $(shell pkg-config --cflags libpng)
+CFLAGS=-std=c99 -Wall -Wextra -Wpedantic $(shell pkg-config --cflags libpng)
 LDLIBS=-lm $(shell pkg-config --libs libpng)
 
 SRC=main.c highlight.c hashtable.c
