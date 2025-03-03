@@ -119,6 +119,8 @@ static inline void setup_palette(void) {
 
 static void input_get_dimensions(char* filename) {
     FILE* fd = fopen(filename, "r");
+    if (!fd)
+        DIE("Can't open file: \"%s\"\n", filename);
 
     uint32_t x = 0, y = 0;
 
