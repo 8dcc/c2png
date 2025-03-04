@@ -244,27 +244,25 @@ static inline bool get_font_bit(uint8_t c, uint8_t x, uint8_t y) {
 }
 
 /*
+ * Go to the next line in the specified PNG context.
+ */
+static inline void newline2png(Ctx* ctx) {
+    ctx->y++;
+    ctx->x = 0;
+}
+
+/*
  * Write the specified character with the specified foreground and background
  * colors to the internal PNG representation in the specified context.
  */
 static void putchar2png(Ctx* ctx, char c, Color fg, Color bg) {
     /*
      * Handle special cases.
-     *
-     * TODO: Don't handle newline here, add a 'newline2png' function, replace in
-     * 'file2png'.
      */
-    switch (c) {
-        case '\n':
-            ctx->y++;
-            ctx->x = 0;
-            return;
-        case '\t':
-            for (int i = 0; i < TAB_SZ; i++)
-                putchar2png(ctx, ' ', fg, bg);
-            return;
-        default:
-            break;
+    if (c == '\t') {
+        for (int i = 0; i < TAB_SZ; i++)
+            putchar2png(ctx, ' ', fg, bg);
+        return;
     }
 
     /*
@@ -381,17 +379,13 @@ static void file2png(Ctx* ctx, FILE* fp) {
          *   2. Highlight the line.
          *   3. Print the highlighted line (with ANSI escape sequences) into the
          *      internal PNG structure.
-         *   4. Print the newline to the PNG structure, effectively changing the
-         *      line.
+         *   4. Print the newline to the PNG structure, effectively moving down.
          *   5. Reset the current position in the line to zero.
          */
         line_buf[line_buf_pos] = '\0';
         hl_line = highlight_line(line_buf, hl_line, line_buf_pos);
         print2png(ctx, hl_line);
-        putchar2png(ctx,
-                    '\n',
-                    ctx->palette[COL_DEFAULT],
-                    ctx->palette[COL_BACK]);
+        newline2png(ctx);
         line_buf_pos = 0;
     }
 
