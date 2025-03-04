@@ -108,6 +108,13 @@ static inline void* safe_malloc(size_t size) {
     return result;
 }
 
+static inline FILE* safe_fopen(const char* pathname, const char* mode) {
+    FILE* fp = fopen(pathname, mode);
+    if (fp == NULL)
+        DIE("Can't open file '%s': %s", pathname, strerror(errno));
+    return fp;
+}
+
 static inline bool get_font_bit(uint8_t c, uint8_t x, uint8_t y) {
     return main_font[c * FONT_H + y] & (0x80 >> x);
 }
@@ -127,10 +134,15 @@ static inline void setup_palette(void) {
     palette[COL_BORDER] = COL(0x222222, 255);
 }
 
-static void input_get_dimensions(char* filename) {
-    FILE* fp = fopen(filename, "r");
-    if (!fp)
-        DIE("Can't open file '%s': %s", filename, strerror(errno));
+static void input_get_dimensions(FILE* fp) {
+    /*
+     * Store old offset in the file, for restoring it later. Then, move to the
+     * beginning of the file.
+     */
+    const long old_offset = ftell(fp);
+    if (old_offset == -1)
+        DIE("Error getting file offset: %s", strerror(errno));
+    rewind(fp);
 
     uint32_t x = 0, y = 0;
 
@@ -150,7 +162,7 @@ static void input_get_dimensions(char* filename) {
             h = y;
     }
 
-    fclose(fp);
+    fseek(fp, old_offset, SEEK_SET);
 }
 
 static void draw_rect(int x, int y, int w, int h, Color c) {
@@ -237,11 +249,15 @@ static void png_print(const char* s) {
     }
 }
 
-static void source_to_png(const char* filename) {
-    /* Write the characters to the rows array */
-    FILE* fp = fopen(filename, "r");
-    if (!fp)
-        DIE("Can't open file '%s': %s", filename, strerror(errno));
+static void source_to_png(FILE* fp) {
+    /*
+     * Store old offset in the file, for restoring it later. Then, move to the
+     * beginning of the file.
+     */
+    const long old_offset = ftell(fp);
+    if (old_offset == -1)
+        DIE("Error getting file offset: %s", strerror(errno));
+    rewind(fp);
 
     if (highlight_init(NULL) < 0)
         DIE("Unable to initialize the highlight library.");
@@ -284,7 +300,8 @@ static void source_to_png(const char* filename) {
     highlight_finish();
 
     free(line_buf);
-    fclose(fp);
+
+    fseek(fp, old_offset, SEEK_SET);
 }
 
 static void draw_border(void) {
@@ -294,11 +311,7 @@ static void draw_border(void) {
     draw_rect(w_px - BORDER_SZ, 0, BORDER_SZ, h_px, palette[COL_BORDER]);
 }
 
-static void write_png_file(const char* filename) {
-    FILE* fp = fopen(filename, "wb");
-    if (!fp)
-        DIE("Can't open file '%s': %s", filename, strerror(errno));
-
+static void write_png_file(FILE* fp) {
     png_structp png =
       png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     if (!png)
@@ -332,7 +345,6 @@ static void write_png_file(const char* filename) {
     /* And the array itself */
     free(rows);
 
-    fclose(fp);
     png_destroy_write_struct(&png, &info);
 }
 
@@ -340,11 +352,14 @@ int main(int argc, char** argv) {
     if (argc < 3)
         DIE("Usage: %s INPUT.c OUTPUT.png", argv[0]);
 
+    FILE* input_fp  = safe_fopen(argv[1], "r");
+    FILE* output_fp = safe_fopen(argv[2], "wb");
+
     /* Setup color palette */
     setup_palette();
 
     /* Ugly, but does the job */
-    input_get_dimensions(argv[1]);
+    input_get_dimensions(input_fp);
     printf("Source contains %d rows and %d cols.\n", h, w);
 
     /* Convert to pixel size, adding top, bottom, left and down margins */
@@ -361,14 +376,17 @@ int main(int argc, char** argv) {
     draw_rect(0, 0, w_px, h_px, palette[COL_BACK]);
 
     /* Convert the text to png */
-    source_to_png(argv[1]);
+    source_to_png(input_fp);
 
     /* Draw border */
     draw_border();
 
     /* Write rows to the output png file */
-    write_png_file(argv[2]);
+    write_png_file(output_fp);
 
     puts("Done.");
+
+    fclose(output_fp);
+    fclose(input_fp);
     return 0;
 }
