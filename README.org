@@ -36,4 +36,4 @@ Syntax highlighting:
 
 This is the output of converting the =src/main.c= file itself.
 
-[[https://user-images.githubusercontent.com/29655971/282262399-2adb57f4-1580-4727-8ceb-c08302fa68e9.png]]
+[[file:assets/main.png]]
