@@ -101,6 +101,13 @@ static png_bytep* rows = NULL;
 
 /*----------------------------------------------------------------------------*/
 
+static inline void* safe_malloc(size_t size) {
+    void* result = malloc(size);
+    if (result == NULL)
+        DIE("Error when allocating %zu bytes: %s", size, strerror(errno));
+    return result;
+}
+
 static inline bool get_font_bit(uint8_t c, uint8_t x, uint8_t y) {
     return main_font[c * FONT_H + y] & (0x80 >> x);
 }
@@ -245,7 +252,7 @@ static void source_to_png(const char* filename) {
     /* Used by us for storing each line and adding NULL terminator */
     size_t line_buf_sz  = w + 1;
     size_t line_buf_pos = 0;
-    char* line_buf      = malloc(line_buf_sz * sizeof(char));
+    char* line_buf      = safe_malloc(line_buf_sz * sizeof(char));
 
     char c;
     while ((c = fgetc(fp)) != EOF) {
@@ -346,9 +353,9 @@ int main(int argc, char** argv) {
     printf("Generating %dx%d image...\n", w_px, h_px);
 
     /* We allocate H_PX rows, W_PX cols in each row, and 4 bytes per pixel */
-    rows = malloc(h_px * sizeof(png_bytep));
+    rows = safe_malloc(h_px * sizeof(png_bytep));
     for (uint32_t y = 0; y < h_px; y++)
-        rows[y] = malloc(w_px * sizeof(uint8_t) * COL_SZ);
+        rows[y] = safe_malloc(w_px * sizeof(uint8_t) * COL_SZ);
 
     /* Clear with background */
     draw_rect(0, 0, w_px, h_px, palette[COL_BACK]);
