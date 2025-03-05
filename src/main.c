@@ -23,7 +23,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 
 #include <png.h>
 
@@ -87,11 +86,11 @@ enum EPaletteIndexes {
     PALETTE_SZ,
 };
 
-typedef struct {
+typedef struct Color {
     uint8_t r, g, b, a;
 } Color;
 
-typedef struct {
+typedef struct Ctx {
     /*
      * Current position when printing in chars.
      */
